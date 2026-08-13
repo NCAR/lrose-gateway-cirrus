@@ -1,0 +1,12 @@
+ name: lrose-hub-2025
+ channels:
+   - conda-forge
+ dependencies:
+   - numpy
+   - cartopy
+   - arm_pyart
+   - metpy
+   - xarray
+   - jupyter
+   - jupyterlab
+   - seaborn

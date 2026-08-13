@@ -1,0 +1,71 @@
+{% extends "page.html" %}
+
+{% block title %}Server Options - LROSE JupyterHub{% endblock %}
+
+{% if announcement_spawn is string %}
+  {% set announcement = announcement_spawn %}
+{% endif %}
+
+{% block main %}
+<div class="container spawn-container">
+    {% block heading %}
+    <div class="row text-center">
+        <div class="col-12">
+            <h1 class="spawn-heading">Server Options</h1>
+            <p class="spawn-subtitle">Configure your JupyterHub server environment</p>
+        </div>
+    </div>
+    {% endblock heading %}
+    
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-9">
+            {% if for_user and user.name != for_user.name -%}
+            <div class="alert alert-info">
+                <i class="fa fa-info-circle"></i> Spawning server for <strong>{{ for_user.name }}</strong>
+            </div>
+            {% endif -%}
+            
+            {% if error_message %}
+            <div class="spawn-error-msg alert alert-danger">
+                <i class="fa fa-exclamation-triangle"></i> <strong>Error:</strong> {{ error_message }}
+            </div>
+            {% elif error_html_message %}
+            <div class="spawn-error-msg alert alert-danger">
+                <i class="fa fa-exclamation-triangle"></i> {{ error_html_message | safe }}
+            </div>
+            {% endif %}
+            
+            <div class="spawn-form-card">
+                <form enctype="multipart/form-data"
+                      id="spawn_form"
+                      action="{{ url | safe }}"
+                      method="post"
+                      role="form">
+                    {{ spawner_options_form | safe }}
+                    
+                    <div class="feedback-container">
+                        <button type="submit" class="btn btn-jupyter btn-lg form-control">
+                            <i class="fa fa-rocket"></i> Start Server
+                        </button>
+                        <div class="feedback-widget hidden">
+                            <i class="fa fa-spinner fa-pulse"></i> Starting...
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock main %}
+
+{% block script %}
+{{ super() }}
+<script>
+    // setup onSubmit feedback
+    $('form').submit((e) => {
+        var form = $(e.target);
+        form.find('.feedback-container>button').attr('disabled', true);
+        form.find('.feedback-container>*').toggleClass('hidden');
+    });
+</script>
+{% endblock script %}

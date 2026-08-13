@@ -1,0 +1,20 @@
+# #####################################
+# End skeleton bashrc
+# #####################################
+
+# #####################################
+# LROSE-gateway specific extra config
+# #####################################
+
+export CLICOLOR=1
+export LANG="en_US.UTF-8"
+
+# Interactive file management; prevent accidental file overwrites
+alias rm="rm -i"
+alias mv="mv -i"
+alias cp="cp -i"
+
+alias ll="ls -alh"
+
+# init conda and activate base environment
+eval "$(conda shell.bash hook)"

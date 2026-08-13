@@ -1,0 +1,93 @@
+{% extends "page.html" %}
+
+{% block title %}LROSE JupyterHub{% endblock %}
+
+{% block favicon %}
+<link rel="icon" href="https://raw.githubusercontent.com/NCAR/lrose-gateway-cirrus/main/manifests/customization/static/images/favicon.ico" type="image/x-icon">
+{% endblock %}
+
+{% block stylesheet %}
+{{ super() }}
+<link rel="stylesheet" href="/hub/static/custom/css/style.css">
+{% endblock %}
+
+{% block logo %}
+<span id="jupyterhub-logo" class="navbar-brand d-flex align-items-center">
+  <a href="https://jupyter.org/hub">
+    <img src='{{ base_url }}logo'
+         alt='JupyterHub logo'
+         class='jpy-logo'
+         title='Home' />
+  </a>
+  <a href="https://ncar.ucar.edu/">
+    <img src="https://raw.githubusercontent.com/NCAR/lrose-gateway-cirrus/main/manifests/customization/static/images/NSF-NCAR_Logo_Color-Blue_RGB.png"
+         alt="NCAR Logo"
+         class="ncar-logo-navbar ms-3">
+  </a>
+</span>
+{% endblock %}
+
+{% block main %}
+<div class="login-container">
+    <div class="lrose-brand">
+        <a href="http://lrose.net/index.html" target="_blank">
+            <img src="https://raw.githubusercontent.com/NCAR/lrose-gateway-cirrus/main/manifests/customization/static/images/LRose_logo.jpg"
+                 alt="LROSE logo" class="lrose-logo">
+        </a>
+    </div>
+
+    <div class="cirrus-header">
+        <h1>LROSE JupyterHub</h1>
+        <p class="cirrus-subtitle">Lidar Radar Open Software Environment</p>
+    </div>
+
+    <div class="login-form-section">
+        {% if login_error %}
+        <p class="login_error">{{ login_error }}</p>
+        {% endif %}
+
+        {% if custom_html %}
+        {{ custom_html | safe }}
+        {% elif login_service %}
+        <div class="service-login">
+            <a role="button" class='btn btn-jupyter btn-lg' href='{{ authenticator_login_url | safe }}'>
+                Sign in with {{ login_service }}
+            </a>
+        </div>
+        {% else %}
+        <form action="{{ authenticator_login_url | safe }}" method="post" role="form">
+            <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
+            <button class="btn btn-jupyter" type="submit">Sign in</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <div class="lrose-resources">
+        <h4>LROSE Resources</h4>
+        <ul>
+            <li><a href="http://lrose.net/index.html" target="_blank">LROSE Website</a></li>
+            <li><a href="http://wiki.lrose.net/index.php/Main_Page" target="_blank">Documentation Wiki</a></li>
+            <li><a href="http://forum.lrose.net/" target="_blank">User Forum</a></li>
+            <li><a href="https://github.com/nsf-lrose/lrose-hub" target="_blank">LROSE Hub Repo</a></li>
+        </ul>
+    </div>
+
+    <div class="cirrus-help-text">
+        <p>
+            Access requires membership in the
+            <a href="https://github.com/nsf-lrose" target="_blank">nsf-lrose</a>
+            GitHub organization.
+        </p>
+        <div class="partner-logos">
+            <a href="https://ncar.ucar.edu/" target="_blank">
+                <img src="https://raw.githubusercontent.com/NCAR/lrose-gateway-cirrus/main/manifests/customization/static/images/NSF-NCAR_Logo_Color-Blue_RGB.png"
+                     alt="NSF NCAR">
+            </a>
+            <a href="https://www.colostate.edu/" target="_blank">
+                <img src="https://raw.githubusercontent.com/NCAR/lrose-gateway-cirrus/main/manifests/customization/static/images/CSU_logo.png"
+                     alt="Colorado State University">
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

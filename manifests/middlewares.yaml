@@ -1,0 +1,12 @@
+# REQUIRED — Traefik equivalent of nginx proxy-body-size. Lets users upload
+# large files (the Jetstream LROSE hub allowed 500m). Request buffering only;
+# do NOT enable response buffering — it breaks notebook websockets/streaming.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: buffering
+  namespace: eol-lrose
+spec:
+  buffering:
+    maxRequestBodyBytes: 524288000      # 500 MiB
+    memRequestBodyBytes: 2097152        # buffer up to 2 MiB in memory, spill to disk above

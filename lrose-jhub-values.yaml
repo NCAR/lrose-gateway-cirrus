@@ -1,0 +1,134 @@
+hub:
+  revisionHistoryLimit: 2
+  templatePaths:
+    - /usr/local/share/jupyterhub/custom_templates
+  extraVolumes:
+    - name: custom-templates
+      configMap:
+        name: jupyterhub-custom-templates
+    - name: custom-static
+      configMap:
+        name: jupyterhub-custom-static-css
+  extraVolumeMounts:
+    - name: custom-templates
+      mountPath: /usr/local/share/jupyterhub/custom_templates
+    - name: custom-static
+      mountPath: /usr/local/share/jupyterhub/static/custom/css
+  extraEnv:
+    GITHUB_CLIENT_ID:
+      valueFrom:
+        secretKeyRef:
+          name: lrose-hub-secrets
+          key: GITHUB_CLIENT_ID
+    GITHUB_CLIENT_SECRET:
+      valueFrom:
+        secretKeyRef:
+          name: lrose-hub-secrets
+          key: GITHUB_CLIENT_SECRET
+    OAUTH_CALLBACK_URL: "https://lrosehub.k8s.ucar.edu/hub/oauth_callback"
+  config:
+    JupyterHub:
+      authenticator_class: github
+    GitHubOAuthenticator:
+      allowed_organizations:
+        - nsf-lrose
+      scope:
+        - read:org
+    Authenticator:
+      admin_users:   # GitHub logins
+        - jcdehart
+        - VarshaReddy1998
+        - khrpcek-ucar
+        - adelmoral2
+        - tingyucha
+        - leavesntwigs
+        - NicholasCote
+        - julienchastang 
+        - ana-v-espinoza
+        - mmbell
+      allow_all: false                  
+      allow_existing_users: true
+
+proxy:
+  service:
+    type: ClusterIP
+
+ingress:
+  enabled: true
+  ingressClassName: traefik-external
+  annotations:
+    cert-manager.io/cluster-issuer: incommon
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.middlewares: "eol-lrose-buffering@kubernetescrd"
+  hosts:
+    - lrosehub.k8s.ucar.edu
+  tls:
+    - secretName: lrosehub-tls-cert
+      hosts:
+        - lrosehub.k8s.ucar.edu
+
+singleuser:
+  image:
+    name: hub.k8s.ucar.edu/docker/nsflrose/gateway
+    tag: "20250811"
+  # Disable the block-cloud-metadata init container. It runs legacy `iptables`
+  # to block 169.254.169.254, but the worker nodes lost the legacy ip_tables
+  # kernel modules after an OS update/reboot, so the init container crash-loops
+  # ("can't initialize iptables table `filter'") and servers fail to spawn.
+  # Not needed on this on-prem cluster (no cloud metadata endpoint to protect).
+  cloudMetadata:
+    blockWithIptables: false
+  defaultUrl: "/lab"
+  startTimeout: 600
+  extraEnv:
+    NBGITPULLER_DEPTH: "0"
+    START_VIRTUAL_DESKTOP: "1"  
+  cpu:
+    guarantee: 3.5
+    limit: 4
+  memory:
+    guarantee: 12G
+    limit: 16G
+  storage:
+    capacity: 20Gi
+    homeMountPath: /home/jovyan 
+    dynamic:
+      storageClass: ceph-kubepv
+  lifecycleHooks:
+    postStart:
+      exec:
+        command:
+          - "bash"
+          - "-c"
+          - >
+            gitpuller https://github.com/nsf-lrose/lrose-hub main lrose-hub;
+            cp /update_workshop_material.ipynb /home/jovyan;
+            [[ -f $HOME/.condarc ]] || cp /.condarc /home/jovyan;
+            [[ -f $HOME/.bashrc ]] || cat /etc/skel/.bashrc /bashrc_lrose >> /home/jovyan/.bashrc;
+            [[ -f $HOME/.profile ]] || cp /.profile /home/jovyan;
+            [[ -f $HOME/.lrose-nightly.ipynb ]] || cp /lrose-nightly.ipynb /home/jovyan;
+            [[ -h $HOME/share ]] || ln -s /share $HOME/share;
+
+  profileList:
+    - display_name: "Low Power"
+      description: "2 GB memory; 1.5 vCPU"
+      kubespawner_override:
+        mem_guarantee: 2G
+        mem_limit: 2G
+        cpu_guarantee: 1.5
+        cpu_limit: 1.5
+    - display_name: "Medium Power"
+      default: true
+      description: "12 GB memory; 3.5 vCPU"
+      kubespawner_override:
+        mem_guarantee: 12G
+        mem_limit: 12G
+        cpu_guarantee: 3.5
+        cpu_limit: 3.5
+    - display_name: "High Power"
+      description: "16 GB memory; 4 vCPU"
+      kubespawner_override:
+        mem_guarantee: 16G
+        mem_limit: 16G
+        cpu_guarantee: 4
+        cpu_limit: 4

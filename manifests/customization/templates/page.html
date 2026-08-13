@@ -1,0 +1,372 @@
+{% macro modal(title, btn_label=None, btn_class="btn-primary") %}
+  {% set key = title.replace(' ', '-').lower() %}
+  {% set btn_label = btn_label or title %}
+  <div class="modal fade"
+       id="{{ key }}-dialog"
+       tabindex="-1"
+       role="dialog"
+       aria-labelledby="{{ key }}-label"
+       aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="{{ key }}-label">{{ title }}</h2>
+          <button type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal"
+                  aria-label="Close"></button>
+        </div>
+        <div class="modal-body">{{ caller() }}</div>
+        <div class="modal-footer">
+          <button type="button"
+                  class="btn {{ btn_class }}"
+                  data-bs-dismiss="modal"
+                  data-dismiss="modal">{{ btn_label }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+<!DOCTYPE HTML>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>
+      {%- block title -%}
+        LROSE JupyterHub
+      {%- endblock title -%}
+    </title>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block stylesheet %}
+      <link rel="stylesheet"
+            href="{{ static_url('css/style.min.css') }}"
+            type="text/css" />
+      <link rel="stylesheet" href="/hub/static/custom/css/style.css">
+    {% endblock stylesheet %}
+    {% block favicon %}
+      <link rel="icon" href="https://raw.githubusercontent.com/NCAR/lrose-gateway-cirrus/main/manifests/customization/static/images/favicon.ico" type="image/x-icon">
+    {% endblock favicon %}
+    {% block scripts %}
+      <script src="{{static_url("components/bootstrap/dist/js/bootstrap.bundle.min.js") }}"
+              type="text/javascript"
+              charset="utf-8"></script>
+      <script src="{{static_url("components/requirejs/require.js") }}"
+              type="text/javascript"
+              charset="utf-8"></script>
+      <script src="{{static_url("components/jquery/dist/jquery.min.js") }}"
+              type="text/javascript"
+              charset="utf-8"></script>
+    {% endblock scripts %}
+    {# djlint js formatting doesn't handle template blocks in js #}
+    {# djlint: off #}
+    <script type="text/javascript">
+      require.config({
+        {% if version_hash %}
+        urlArgs: "v={{version_hash}}",
+        {% endif %}
+        baseUrl: '{{static_url("js", include_version=False)}}',
+        paths: {
+          components: '../components',
+          jquery: '../components/jquery/dist/jquery.min',
+          moment: "../components/moment/moment",
+        },
+      });
+
+      window.jhdata = {
+        base_url: "{{base_url}}",
+        prefix: "{{prefix}}",
+        {% if user %}
+        {#- Autoescaping in templates is turned on in JupyterHub, #}
+        {#-  need `| safe` to prevent escaping #}
+        {#- `https://github.com/pallets/markupsafe/blob/2.1.4/src/markupsafe/_native.py#L6` #}
+        user: "{{ user.json_escaped_name | safe }}",
+        {% endif %}
+        {% if admin_access %}
+        admin_access: true,
+        {% else %}
+        admin_access: false,
+        {% endif %}
+        {% if not no_spawner_check and user and user.spawner.options_form %}
+        options_form: true,
+        {% else %}
+        options_form: false,
+        {% endif %}
+        xsrf_token: "{{ xsrf_token }}",
+      };
+
+</script>
+    {# djlint: on #}
+    {% block meta %}
+      <meta name="description" content="JupyterHub">
+      <meta name="keywords" content="Jupyter, JupyterHub">
+    {% endblock meta %}
+  </head>
+  <body>
+    <noscript>
+      <div id='noscript'>
+        JupyterHub requires JavaScript.
+        <br>
+        Please enable it to proceed.
+      </div>
+    </noscript>
+    {% block nav_bar %}
+      <nav class="navbar navbar-expand-sm bg-body-tertiary mb-4 custom-navbar">
+        <div class="container-fluid">
+          {% block logo %}
+            <span id="jupyterhub-logo" class="navbar-brand d-flex align-items-center">
+              <a href="{{ logo_url or base_url }}">
+                <img src='{{ base_url }}logo'
+                     alt='JupyterHub logo'
+                     class='jpy-logo'
+                     title='Home' />
+              </a>
+              <img src="https://raw.githubusercontent.com/NCAR/lrose-gateway-cirrus/main/manifests/customization/static/images/NSF-NCAR_Logo_Color-Blue_RGB.png" 
+                   alt="NCAR Logo" 
+                   class="ncar-logo-navbar ms-3">
+            </span>
+          {% endblock logo %}
+          {% if user %}
+            <button class="navbar-toggler"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#thenavbar"
+                    aria-controls="thenavbar"
+                    aria-expanded="false"
+                    aria-label="Toggle navigation">
+              <span class="navbar-toggler-icon"></span>
+            </button>
+          {% endif %}
+          <div class="collapse navbar-collapse" id="thenavbar">
+            <ul class="navbar-nav me-auto mb-0">
+              {% if user %}
+                {% block nav_bar_left_items %}
+                  <li class="nav-item">
+                    <a class="nav-link" href="{{ base_url }}home">Home</a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="{{ base_url }}token">Token</a>
+                  </li>
+                  {% if 'admin-ui' in parsed_scopes %}
+                    <li class="nav-item">
+                      <a class="nav-link" href="{{ base_url }}admin">Admin</a>
+                    </li>
+                  {% endif %}
+                  {% if services %}
+                    <li class="nav-item dropdown">
+                      <a href="#"
+                         class="nav-link dropdown-toggle"
+                         data-bs-toggle="dropdown"
+                         role="button"
+                         aria-expanded="false">Services</a>
+                      <ul class="dropdown-menu">
+                        {% for service in services %}
+                          {% block service scoped %}
+                            <li>
+                              <a class="dropdown-item" href="{{ service.href }}">{{ service.name }}</a>
+                            </li>
+                          {% endblock service %}
+                        {% endfor %}
+                      </ul>
+                    </li>
+                  {% endif %}
+                {% endblock nav_bar_left_items %}
+              {% endif %}
+            </ul>
+            <ul class="nav navbar-nav me-2">
+              {% block nav_bar_right_items %}
+                <li class="nav-item">
+                  {% block login_widget %}
+                    <span id="login_widget">
+                      {% if user %}
+                        <span class="me-1">{{ user.name }}</span>
+                        <a id="logout"
+                           role="button"
+                           class="btn btn-sm btn-outline-contrast"
+                           href="{{ logout_url }}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
+                      {% else %}
+                        <a id="login"
+                           role="button"
+                           class="btn btn-sm btn-outline-contrast"
+                           href="{{ login_url }}">Login</a>
+                      {% endif %}
+                    </span>
+                  {% endblock login_widget %}
+                </li>
+              {% endblock nav_bar_right_items %}
+            </ul>
+          </div>
+          {% block header %}
+          {% endblock header %}
+        </div>
+      </nav>
+    {% endblock nav_bar %}
+    {% block announcement %}
+      {% if announcement %}
+        <div class="container text-center announcement alert alert-warning">{{ announcement | safe }}</div>
+      {% endif %}
+    {% endblock announcement %}
+    {% block main %}
+    {% endblock main %}
+    {% block footer %}
+      <footer>
+        <div class="org-footer">
+            <div class="container-lg py-md-3">
+                <div class="row">
+                    <div class="col-12 col-md-5 py-2">
+                        <div class="accordion" id="accordionNCAR">
+                            <div id="ncarHeader" class="d-flex justify-content-between">
+                                <h3 class="text-light pb-md-2">NSF NCAR</h3>
+                                <button class="btn text-light px-2 collapsed d-md-none" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#ncarCollapseMenu" 
+                                        aria-label="NCAR Organization" 
+                                        aria-expanded="false" 
+                                        aria-controls="ncarCollapseMenu">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                            <div id="ncarCollapseMenu" class="collapse d-md-block" aria-labelledby="ncarHeader">
+                                <ul class="nav flex-column">
+                                    <li class="nav-item"><a class="nav-link" href="https://ncar.ucar.edu">NSF NCAR Homepage</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://www2.acom.ucar.edu/">ACOM | Atmospheric Chemistry Observations &amp; Modeling</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://www.cgd.ucar.edu/">CGD Laboratory</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://www.cisl.ucar.edu">CISL | Computational &amp; Information Systems</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://edec.ucar.edu/">EdEC | Education, Engagement &amp; Early-Career Development</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://www.eol.ucar.edu/">EOL | Earth Observing Laboratory</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://www2.hao.ucar.edu/">HAO | High Altitude Observatory</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://www.mmm.ucar.edu/">MMM | Mesoscale &amp; Microscale Meteorology</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://ral.ucar.edu/">RAL | Research Applications Laboratory</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12 col-md py-2">
+                        <div class="accordion" id="accordionUCAR">
+                            <div id="ucarHeader" class="d-flex justify-content-between">
+                                <h3 class="text-light pb-md-2">UCAR</h3>
+                                <button class="btn px-2 text-light collapsed d-md-none" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#ucarCollapseMenu" 
+                                        aria-label="UCAR Organization" 
+                                        aria-expanded="false" 
+                                        aria-controls="ucarCollapseMenu">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                            <div id="ucarCollapseMenu" class="collapse d-md-block" aria-labelledby="ucarHeader">
+                                <ul class="nav flex-column">
+                                    <li class="nav-item"><a class="nav-link" href="https://www.ucar.edu">UCAR Homepage</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://www.ucar.edu/community-programs">Community Programs</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://www.ucar.edu/what-we-offer/education-training">Education &amp; Training</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://sundog.ucar.edu/">For Staff</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://www.ucar.edu/what-we-do/advocacy/office-government-relations">Government Relations &amp; External Engagement</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://www.ucar.edu/who-we-are/membership">Member Institutions</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://www.ucar.edu/what-we-do/tech-transfer-engagement">Tech Transfer &amp; Engagement</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="https://www.ucar.edu/what-we-do/university-collaboration">University Collaboration</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12 col-md py-2">
+                        <div class="newsletter-signup">
+                            <h3 class="text-light pb-md-2">Subscribe to NCAR|UCAR News</h3>
+                            <div id="mc_embed_signup">
+                                <form action="https://ucar.us4.list-manage.com/subscribe/post?u=289033ba2718c3aa3d2b2e76f&amp;id=80502e816e" 
+                                      method="post" 
+                                      id="mc-embedded-subscribe-form" 
+                                      name="mc-embedded-subscribe-form" 
+                                      class="validate" 
+                                      target="_blank" 
+                                      novalidate>
+                                    <div id="mc_embed_signup_scroll" class="input-group">
+                                        <input type="email" 
+                                              value="" 
+                                              name="EMAIL" 
+                                              class="form-control" 
+                                              id="mce-EMAIL" 
+                                              required 
+                                              aria-label="Enter your email address to subscribe to the newsletter" 
+                                              placeholder="Email address">
+                                        <button class="btn btn-primary input-group-text" type="submit">Sign Up</button>
+                                        <div style="position: absolute; left: -5000px;" aria-hidden="true">
+                                            <label for="b_289033ba2718c3aa3d2b2e76f_80502e816e">Name</label>
+                                            <input type="text" 
+                                                  name="b_289033ba2718c3aa3d2b2e76f_80502e816e" 
+                                                  tabindex="-1" 
+                                                  value="" 
+                                                  id="b_289033ba2718c3aa3d2b2e76f_80502e816e">
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="social pt-4">
+                            <h4 class="text-light">Follow NCAR|UCAR</h4>
+                            <div class="social-icons text-light">
+                                <a href="https://www.facebook.com/ncar.ucar" aria-label="Follow us on Facebook"><i class="fab fa-facebook-f"></i></a>
+                                <a href="https://twitter.com/NCAR_Science" aria-label="Follow us on Twitter"><i class="fab fa-x-twitter"></i></a>
+                                <a href="https://instagram.com/ncar_ucar" aria-label="Follow us on Instagram"><i class="fab fa-instagram"></i></a>
+                                <a href="https://youtube.com/ncarucar" aria-label="Follow us on YouTube"><i class="fab fa-youtube"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="legal-footer py-3">
+            <div class="container-lg">
+                <div class="row">
+                    <div class="col-12">
+                        <p class="text-light copyright pe-md-2 mb-2">&copy; 2025 UCAR</p>
+                        <ul class="nav flex-column flex-md-row">
+                            <li class="nav-item"><a class="nav-link" href="https://www.ucar.edu/privacy-notice">Privacy</a></li>
+                            <li class="nav-item"><a class="nav-link" href="https://www.ucar.edu/cookie-other-tracking-technologies-notice">Cookies</a></li>
+                            <li class="nav-item"><a class="nav-link" href="https://www.ucar.edu/web-accessibility">Web Accessibility</a></li>
+                            <li class="nav-item"><a class="nav-link" href="https://www.ucar.edu/terms-of-use">Terms of Use</a></li>
+                            <li class="nav-item"><a class="nav-link" href="https://www.ucar.edu/notification-copyright-infringement-digital-millenium-copyright-act">Copyright Issues</a></li>
+                            <li class="nav-item"><a class="nav-link" href="https://nsf.gov">Sponsored by U.S. NSF</a></li>
+                            <li class="nav-item"><a class="nav-link" href="https://www.ucar.edu/who-we-are/ethics">Report Ethics Concern</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-12 text-gray-light mt-2">
+                        <span class="d-block d-md-inline pt-2 pt-md-0"><b>Postal Address:</b></span>
+                        <span>P.O. Box 3000, Boulder, CO 80307-3000</span>
+                        <span class="d-none d-md-inline">&bull;</span>
+                        <span class="d-block d-md-inline pt-2 pt-md-0"><b>Shipping Address:</b></span>
+                        <span>3090 Center Green Drive, Boulder, CO 80301</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="nsf-footer py-3">
+            <div class="container-lg">
+                <div class="row align-items-center">
+                    <div class="col-2 col-md-1 pb-3 pb-md-0 me-md-3">
+                        <img src="https://www.cisl.ucar.edu/themes/custom/img/NSF_Official_logo.png" alt="NSF Logo" />
+                    </div>
+                    <div class="col-10 col-md-10 flex-md-grow-1">
+                        <p class="mb-0">
+                            This material is based upon work supported by the NSF National Center for Atmospheric Research, 
+                            a major facility sponsored by the U.S. National Science Foundation and managed by the University 
+                            Corporation for Atmospheric Research. Any opinions, findings and conclusions or recommendations 
+                            expressed in this material do not necessarily reflect the views of the 
+                            <a href="https://nsf.gov" target="_blank">U.S. National Science Foundation.</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    {% endblock footer %}
+    {% call modal('Error', btn_label='OK') %}
+      <div class="ajax-error alert-danger">The error</div>
+    {% endcall %}
+    {% block script %}
+    {% endblock script %}
+  </body>
+</html>
