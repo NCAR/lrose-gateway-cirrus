@@ -104,7 +104,8 @@ singleuser:
             gitpuller https://github.com/nsf-lrose/lrose-hub main lrose-hub;
             cp /update_workshop_material.ipynb /home/jovyan;
             [[ -f $HOME/.condarc ]] || cp /.condarc /home/jovyan;
-            [[ -f $HOME/.bashrc ]] || cat /etc/skel/.bashrc /bashrc_lrose >> /home/jovyan/.bashrc;
+            [[ -f $HOME/.bashrc ]] || cat /etc/skel/.bashrc /bashrc_lrose > /home/jovyan/.bashrc;
+            grep -q 'conda activate lrose-hub' $HOME/.bashrc || printf '\n# init conda and activate the lrose-hub environment\neval "$(conda shell.bash hook)"\nconda activate lrose-hub\n' >> $HOME/.bashrc;
             [[ -f $HOME/.profile ]] || cp /.profile /home/jovyan;
             [[ -f $HOME/.lrose-nightly.ipynb ]] || cp /lrose-nightly.ipynb /home/jovyan;
             [[ -h $HOME/share ]] || ln -s /share $HOME/share;

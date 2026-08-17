@@ -1,12 +1,19 @@
- name: lrose-hub-2025
+ name: lrose-hub
  channels:
    - conda-forge
  dependencies:
-   - numpy
-   - cartopy
+   - aiohttp
    - arm_pyart
-   - metpy
-   - xarray
+   - cartopy
+   - cmweather
+   - ipykernel
    - jupyter
    - jupyterlab
+   - matplotlib
+   - metpy
+   - numpy
+   - requests
    - seaborn
+   - xarray
+   - xradar
+   - zarr

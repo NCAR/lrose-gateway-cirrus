@@ -16,5 +16,6 @@ alias cp="cp -i"
 
 alias ll="ls -alh"
 
-# init conda and activate base environment
+# init conda and activate the lrose-hub environment
 eval "$(conda shell.bash hook)"
+conda activate lrose-hub

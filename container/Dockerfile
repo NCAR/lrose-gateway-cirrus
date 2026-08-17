@@ -8,7 +8,7 @@ LABEL maintainer="LROSE <lrose-help@lists.colostate.edu>"
 
 # See https://github.com/NCAR/lrose-core/releases
 # LROSE parameters
-ENV LROSE_RELEASE="lrose-core-20250811" \
+ENV LROSE_RELEASE="lrose-core-20260425" \
     LROSE_TARGET_OS="ubuntu_24.04" \
     LROSE_TARGET_ARCH="amd64" \
     PATH="/usr/local/lrose/bin:/share/lrose-nightly/bin:$PATH" \
@@ -34,7 +34,9 @@ RUN apt-get update --yes && \
       thunar xfdesktop4 xfwm4 xfce4-panel xfce4-session \
       xfce4-appfinder mousepad xfce4-terminal dbus-x11 && \
     # LROSE
-    wget ${LROSE_RELEASE_URL} -O /tmp/lrose.deb && \
+    # --no-hsts: HOME is /home/jovyan even as root, so wget would drop a \
+    # root-owned .wget-hsts there and break the later fix-permissions run \
+    wget --no-hsts ${LROSE_RELEASE_URL} -O /tmp/lrose.deb && \
     apt-get install -y /tmp/lrose.deb && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     # Used to run the novnc websockets proxy server:
@@ -53,7 +55,14 @@ RUN mamba install --quiet --yes \
       'conda-forge::jupyter-server-proxy' \
       'conda-forge::nbgitpuller' \
       'conda-forge::ncview' && \
-    mamba create --name lrose-hub-2025 -f /tmp/environment.yml && \
+    mamba create --name lrose-hub -f /tmp/environment.yml && \
+    # Make lrose-hub the default notebook kernel by overwriting base's
+    # "python3" kernelspec, which is what JupyterLab opens new notebooks with.
+    # nb_conda_kernels still lists every other env alongside it.
+    "${CONDA_DIR}/envs/lrose-hub/bin/python" -m ipykernel install \
+      --prefix="${CONDA_DIR}" \
+      --name python3 \
+      --display-name "Python 3 (lrose-hub)" && \
     mamba clean --all -f -y && \
     fix-permissions "${CONDA_DIR}" && \
     fix-permissions "/home/${NB_USER}"
@@ -71,13 +80,29 @@ COPY --chown=1000:100 \
      scripts/lrose-swap-install.sh \
      /
 
-# Jupyter with VNC auxiliary files
+# Activate lrose-hub in interactive shells. This lives in /etc rather than
+# /home/${NB_USER}/.bashrc on purpose: on the hub $HOME is a PVC that masks
+# anything the image writes there. /etc/profile.d covers login shells (the
+# JupyterLab terminal), /etc/bash.bashrc covers interactive non-login shells
+# (the XFCE terminal, kubectl exec). The postStart hook in
+# ../lrose-jhub-values.yaml also appends the same activation to the PVC's
+# .bashrc; the CONDA_DEFAULT_ENV guard keeps the two from stacking.
 USER root
-RUN wget ${JVNC_URL}/jupyter_server_proxy_config.py \
+RUN printf '%s\n' \
+      '# Activate the lrose-hub conda env in interactive shells.' \
+      'if [ -n "${BASH_VERSION-}" ] && [ "${CONDA_DEFAULT_ENV-}" != "lrose-hub" ]; then' \
+      '    eval "$(conda shell.bash hook)"' \
+      '    conda activate lrose-hub' \
+      'fi' \
+      > /etc/profile.d/10-lrose-activate.sh && \
+    echo '. /etc/profile.d/10-lrose-activate.sh' >> /etc/bash.bashrc
+
+# Jupyter with VNC auxiliary files
+RUN wget --no-hsts ${JVNC_URL}/jupyter_server_proxy_config.py \
        -O /etc/jupyter/jupyter_server_proxy_config.py && \
     cat /etc/jupyter/jupyter_server_proxy_config.py >> /etc/jupyter/jupyter_server_config.py && \
-    wget ${JVNC_URL}/start_virtual_desktop.sh -O /usr/local/bin/before-notebook.d/start_virtual_desktop.sh && \
-    wget ${JVNC_URL}/xinitrc -O /etc/X11/xinit/xinitrc
+    wget --no-hsts ${JVNC_URL}/start_virtual_desktop.sh -O /usr/local/bin/before-notebook.d/start_virtual_desktop.sh && \
+    wget --no-hsts ${JVNC_URL}/xinitrc -O /etc/X11/xinit/xinitrc
 USER ${NB_USER}
 
 WORKDIR "${HOME}"
