@@ -14,9 +14,9 @@ spec:
   data:
     - secretKey: GITHUB_CLIENT_ID
       remoteRef:
-        key: lrose/hub
+        key: eol-lrose/hub
         property: github_client_id
     - secretKey: GITHUB_CLIENT_SECRET
       remoteRef:
-        key: lrose/hub
+        key: eol-lrose/hub
         property: github_client_secret
