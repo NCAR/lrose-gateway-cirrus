@@ -8,7 +8,7 @@ spec:
     matchLabels:
       app: jupyterhub
       component: hub
-      release: lrose-jhub
+      release: lrosehub
   egress:
     - toEntities:
         - kube-apiserver
