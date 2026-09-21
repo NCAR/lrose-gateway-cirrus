@@ -70,7 +70,7 @@ ingress:
 singleuser:
   image:
     name: hub.k8s.ucar.edu/docker/nsflrose/gateway
-    tag: "20250811"
+    tag: "2026-08-17.14.42"
   # Disable the block-cloud-metadata init container. It runs legacy `iptables`
   # to block 169.254.169.254, but the worker nodes lost the legacy ip_tables
   # kernel modules after an OS update/reboot, so the init container crash-loops
