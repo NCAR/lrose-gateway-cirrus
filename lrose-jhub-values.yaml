@@ -1,5 +1,13 @@
 hub:
   revisionHistoryLimit: 2
+  KubeSpawner:
+      container_security_context:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+              drop: ["ALL"]
   templatePaths:
     - /usr/local/share/jupyterhub/custom_templates
   extraVolumes:
@@ -78,6 +86,18 @@ singleuser:
   # Not needed on this on-prem cluster (no cloud metadata endpoint to protect).
   cloudMetadata:
     blockWithIptables: false
+  uid: 1000
+  fsGid: 100
+  allowPrivilegeEscalation: false
+  extraPodConfig:
+      securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          fsGroup: 100
+          fsGroupChangePolicy: OnRootMismatch
+          seccompProfile:
+              type: RuntimeDefault
   defaultUrl: "/lab"
   startTimeout: 600
   extraEnv:
