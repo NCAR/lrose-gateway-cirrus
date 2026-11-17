@@ -1,13 +1,5 @@
 hub:
   revisionHistoryLimit: 2
-  KubeSpawner:
-      container_security_context:
-          runAsNonRoot: true
-          runAsUser: 1000
-          runAsGroup: 1000
-          allowPrivilegeEscalation: false
-          capabilities:
-              drop: ["ALL"]
   templatePaths:
     - /usr/local/share/jupyterhub/custom_templates
   extraVolumes:
@@ -35,6 +27,14 @@ hub:
           key: GITHUB_CLIENT_SECRET
     OAUTH_CALLBACK_URL: "https://lrosehub.k8s.ucar.edu/hub/oauth_callback"
   config:
+    KubeSpawner:
+        container_security_context:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+                drop: ["ALL"]
     JupyterHub:
       authenticator_class: github
     GitHubOAuthenticator:
